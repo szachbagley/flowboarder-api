@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm init -y)",
+      "Bash(npm install:*)",
+      "Bash(mkdir:*)",
+      "Bash(/usr/local/mysql/bin/mysql:*)"
+    ]
+  }
+}
