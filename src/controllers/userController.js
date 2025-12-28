@@ -1,11 +1,11 @@
-const { query } = require('../config/queries');
+const User = require('../models/User');
 
 /**
  * Get all users
  */
 const getAllUsers = async (req, res) => {
   try {
-    const users = await query('SELECT * FROM users');
+    const users = await User.findAll();
     res.json({ success: true, data: users });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -18,13 +18,13 @@ const getAllUsers = async (req, res) => {
 const getUserById = async (req, res) => {
   try {
     const { id } = req.params;
-    const users = await query('SELECT * FROM users WHERE id = ?', [id]);
+    const user = await User.findById(id);
 
-    if (users.length === 0) {
+    if (!user) {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
 
-    res.json({ success: true, data: users[0] });
+    res.json({ success: true, data: user });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -36,25 +36,17 @@ const getUserById = async (req, res) => {
 const createUser = async (req, res) => {
   try {
     const { email, name } = req.body;
-
-    if (!email || !name) {
-      return res.status(400).json({
-        success: false,
-        error: 'Email and name are required'
-      });
-    }
-
-    const result = await query(
-      'INSERT INTO users (email, name) VALUES (?, ?)',
-      [email, name]
-    );
+    const user = await User.create({ email, name });
 
     res.status(201).json({
       success: true,
-      data: { id: result.insertId, email, name }
+      data: user
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    const statusCode = error.message.includes('required') ||
+                       error.message.includes('Invalid') ||
+                       error.message.includes('already exists') ? 400 : 500;
+    res.status(statusCode).json({ success: false, error: error.message });
   }
 };
 
@@ -66,18 +58,17 @@ const updateUser = async (req, res) => {
     const { id } = req.params;
     const { email, name } = req.body;
 
-    const result = await query(
-      'UPDATE users SET email = ?, name = ? WHERE id = ?',
-      [email, name, id]
-    );
+    const user = await User.update(id, { email, name });
 
-    if (result.affectedRows === 0) {
+    if (!user) {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
 
-    res.json({ success: true, data: { id, email, name } });
+    res.json({ success: true, data: user });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    const statusCode = error.message.includes('Invalid') ||
+                       error.message.includes('already exists') ? 400 : 500;
+    res.status(statusCode).json({ success: false, error: error.message });
   }
 };
 
@@ -87,14 +78,59 @@ const updateUser = async (req, res) => {
 const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
+    const deleted = await User.delete(id);
 
-    const result = await query('DELETE FROM users WHERE id = ?', [id]);
-
-    if (result.affectedRows === 0) {
+    if (!deleted) {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
 
     res.json({ success: true, message: 'User deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+/**
+ * Search users
+ */
+const searchUsers = async (req, res) => {
+  try {
+    const { q } = req.query;
+
+    if (!q) {
+      return res.status(400).json({
+        success: false,
+        error: 'Search query parameter "q" is required'
+      });
+    }
+
+    const users = await User.search(q);
+    res.json({ success: true, data: users });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+/**
+ * Get user statistics
+ */
+const getUserStats = async (req, res) => {
+  try {
+    const stats = await User.getStats();
+    res.json({ success: true, data: stats });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+/**
+ * Get recent users
+ */
+const getRecentUsers = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+    const users = await User.getRecent(limit);
+    res.json({ success: true, data: users });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -105,5 +141,8 @@ module.exports = {
   getUserById,
   createUser,
   updateUser,
-  deleteUser
+  deleteUser,
+  searchUsers,
+  getUserStats,
+  getRecentUsers
 };

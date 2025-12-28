@@ -2,6 +2,9 @@
 
 Backend API for Flowboarder built with Node.js and Express with MySQL database - fully containerized with Docker.
 
+Flowboarder is an application that streamlines AI-powered storyboarding for filmmakers.
+Users define characters, settings, objects, art styles, etc. and the application stores that context. Then, the user defines a shot to storyboard, without worrying about repeating all the context for the description. The app then gets an AI-generated image of the shot from an image generation model and returns it to the user, who can then use it in storyboarding with Flowboarder's additional tools.
+
 ## Quick Start (Full Docker Stack)
 
 ```bash
@@ -39,6 +42,7 @@ npm run docker:down
 ```
 
 **What this does:**
+
 - Builds the API Docker image from `Dockerfile`
 - Starts MySQL container
 - Starts API container
@@ -74,6 +78,7 @@ This uses `docker-compose.dev.yml` and mounts your local code for live reloading
 ## Docker Commands Reference
 
 ### Basic Commands
+
 - `npm run docker:up` - Start all services (API + MySQL) in background
 - `npm run docker:down` - Stop all services
 - `npm run docker:build` - Rebuild Docker images
@@ -81,30 +86,43 @@ This uses `docker-compose.dev.yml` and mounts your local code for live reloading
 - `npm run docker:clean` - Remove all containers and data (destructive!)
 
 ### Development Commands
+
 - `npm run docker:dev` - Start in development mode with hot reload
 - `npm run docker:db` - Start only MySQL container
 
 ### Logging Commands
+
 - `npm run docker:logs` - View logs from all services
 - `npm run docker:logs:api` - View only API logs
 - `npm run docker:logs:db` - View only MySQL logs
 
 ### Local Development Commands
+
 - `npm run dev` - Run API locally (requires MySQL in Docker)
 - `npm start` - Run API locally in production mode
 
 ## API Endpoints
 
 ### General
+
 - `GET /health` - Health check endpoint
 - `GET /api` - Welcome message
 
-### Users (Example CRUD)
+### Users
+
+**CRUD Operations**
+
 - `GET /api/users` - Get all users
 - `GET /api/users/:id` - Get user by ID
 - `POST /api/users` - Create new user (requires email and name in body)
 - `PUT /api/users/:id` - Update user (requires email and name in body)
 - `DELETE /api/users/:id` - Delete user
+
+**Additional Endpoints**
+
+- `GET /api/users/search?q=term` - Search users by name or email
+- `GET /api/users/stats` - Get user statistics (total, signups by period)
+- `GET /api/users/recent?limit=10` - Get recent users (default 10)
 
 ## Project Structure
 
@@ -117,6 +135,10 @@ flowboarder-api/
 ├── src/
 │   ├── app.js               # Express app configuration
 │   ├── server.js            # Server entry point
+│   ├── models/              # Data models
+│   │   ├── Model.js         # Base model class
+│   │   ├── User.js          # User model
+│   │   └── index.js         # Models export
 │   ├── routes/              # Route definitions
 │   │   ├── index.js
 │   │   └── users.js
@@ -160,25 +182,116 @@ DB_ROOT_PASSWORD=rootpassword
 ```
 
 **Important Notes:**
+
 - `DB_HOST` should be `localhost` in `.env` for local development
 - Docker Compose automatically overrides `DB_HOST=mysql` when running the API in a container
 - Change passwords for production deployments
 
-## Using the Database
+## Working with Models
 
-The database connection is available through the query helper:
+The API uses a model-based architecture for data management. Models provide validation, business logic, and a clean interface for database operations.
+
+### Using the User Model
 
 ```javascript
-const { query } = require('./config/queries');
+const User = require("./models/User");
 
-// Example: Get all users
-const users = await query('SELECT * FROM users');
+// Create a user (with automatic validation)
+const user = await User.create({
+  email: "user@example.com",
+  name: "John Doe",
+});
 
-// Example: Insert a user
-const result = await query(
-  'INSERT INTO users (email, name) VALUES (?, ?)',
-  ['user@example.com', 'John Doe']
-);
+// Find by ID
+const user = await User.findById(1);
+
+// Find by email
+const user = await User.findByEmail("user@example.com");
+
+// Search users
+const users = await User.search("john");
+
+// Update user
+const updated = await User.update(1, { name: "Jane Doe" });
+
+// Delete user
+const deleted = await User.delete(1);
+
+// Get statistics
+const stats = await User.getStats();
+```
+
+### Creating Your Own Models
+
+Extend the base `Model` class to create new models:
+
+```javascript
+const Model = require("./models/Model");
+
+class Post extends Model {
+  constructor() {
+    super("posts"); // table name
+  }
+
+  // Define schema
+  static get schema() {
+    return {
+      id: { type: "number", required: false, autoIncrement: true },
+      title: { type: "string", required: true, maxLength: 255 },
+      content: { type: "text", required: true },
+    };
+  }
+
+  // Add custom validation
+  validate(data, isUpdate = false) {
+    const errors = [];
+    if (data.title && data.title.length < 3) {
+      errors.push("Title must be at least 3 characters");
+    }
+    return { valid: errors.length === 0, errors };
+  }
+
+  // Add custom methods
+  async findByTitle(title) {
+    return await this.findOne({ title });
+  }
+}
+
+module.exports = new Post();
+```
+
+### Base Model Methods
+
+All models automatically inherit these methods:
+
+- `findAll(options)` - Get all records (supports limit, offset, orderBy)
+- `findById(id)` - Find record by ID
+- `findBy(criteria)` - Find records matching criteria
+- `findOne(criteria)` - Find first record matching criteria
+- `create(data)` - Create new record
+- `update(id, data)` - Update record by ID
+- `delete(id)` - Delete record by ID
+- `count(criteria)` - Count records
+- `exists(id)` - Check if record exists
+
+### Model Features
+
+- **Automatic validation** - Email format, required fields, length limits
+- **Duplicate detection** - Prevents duplicate emails
+- **Data sanitization** - Trims whitespace, normalizes email
+- **Schema definition** - Clear data structure
+- **Custom methods** - Add domain-specific operations
+- **Error handling** - Descriptive validation errors
+
+## Direct Database Queries
+
+For complex queries not covered by models, use the query helper:
+
+```javascript
+const { query } = require("./config/queries");
+
+// Raw SQL query
+const users = await query("SELECT * FROM users WHERE created_at > ?", [date]);
 ```
 
 ## Testing the API
@@ -212,6 +325,7 @@ curl -X DELETE http://localhost:3000/api/users/1
 ## Docker Architecture
 
 ### Production Stack (`docker-compose.yml`)
+
 - **API Container**: Node.js 20 Alpine, production dependencies only
 - **MySQL Container**: MySQL 8.1, persistent volume storage
 - **Network**: Bridge network for container communication
@@ -219,11 +333,13 @@ curl -X DELETE http://localhost:3000/api/users/1
 - **Dependencies**: API waits for MySQL to be healthy before starting
 
 ### Development Stack (`docker-compose.dev.yml`)
+
 - **API Container**: Includes nodemon for hot reload
 - **Volume Mounting**: Local code mounted into container
 - **Live Updates**: Changes to code automatically restart the server
 
 ### Key Features
+
 - **Automatic initialization**: Database schema created on first run
 - **Persistent data**: MySQL data survives container restarts
 - **Health monitoring**: Containers automatically restart on failure
@@ -233,6 +349,7 @@ curl -X DELETE http://localhost:3000/api/users/1
 ## Troubleshooting
 
 ### Database connection fails
+
 ```bash
 # Check if MySQL is ready
 npm run docker:logs:db
@@ -242,6 +359,7 @@ npm run docker:logs:db
 ```
 
 ### API won't start
+
 ```bash
 # View API logs
 npm run docker:logs:api
@@ -252,6 +370,7 @@ npm run docker:up
 ```
 
 ### Reset everything
+
 ```bash
 # Remove all containers and data
 npm run docker:clean
@@ -261,6 +380,7 @@ npm run docker:up
 ```
 
 ### Port already in use
+
 ```bash
 # Change port in .env file
 PORT=3001

@@ -1,0 +1,87 @@
+┌─────────────────────────┐
+│          USER           │
+├─────────────────────────┤
+│ * user_id (PK)     INT  │
+│   email          STRING │
+│   name           STRING │
+└───────────┬─────────────┘
+            │
+            │ 1
+            │
+            │ ∞
+┌───────────┴─────────────┐
+│        PROJECT          │
+├─────────────────────────┤
+│ * project_id (PK)  INT  │
+│   project_title  STRING │
+│ # user_id (FK)     INT  │
+│   art_style      STRING │
+│   description    STRING │
+└───────────┬─────────────┘
+            │
+            ├────────────────────────────────┬────────────────────────────────┐
+            │ 1                              │ 1                              │ 1
+            │                                │                                │
+            │ ∞                              │ ∞                              │ ∞
+┌───────────┴─────────────┐    ┌─────────────┴───────────┐    ┌───────────────┴─────────────┐
+│       CHARACTER         │    │         SETTING         │    │           PANEL             │
+├─────────────────────────┤    ├─────────────────────────┤    ├─────────────────────────────┤
+│ * character_id (PK) INT │    │ * setting_id (PK)  INT  │    │ * panel_id (PK)        INT  │
+│   name           STRING │    │   name           STRING │    │ # project_id (FK)      INT  │
+│ # project_id (FK)  INT  │    │ # project_id (FK)  INT  │    │   image_link        STRING  │
+│   description    STRING │    │   description    STRING │    │ # setting_id (FK)      INT  │
+│   default_variant STRING│    └─────────────┬───────────┘    │   shot_type         STRING  │
+│   variant        STRING │                  │                │   aspect_ratio      STRING  │
+└───────────┬─────────────┘                  │                │   description       STRING  │
+            │                                │                └──────────────┬──────────────┘
+            │ 1                              │ 1                             │
+            │                                │                               │
+            │ ∞                              │                               │
+┌───────────┴─────────────┐                  │                               │
+│   CHARACTER_VARIANT     │                  │                               │
+├─────────────────────────┤                  │                               │
+│ * variant_id (PK)  INT  │                  │                               │
+│ # character_id (FK) INT │                  │                               │
+│   name           STRING │                  │                               │
+│   description    STRING │                  │                               │
+└───────────┬─────────────┘                  │                               │
+            │                                │                               │
+            │ 1                              │                               │ 1
+            │                                │                               │
+            │ ∞                              │ ∞                             │ ∞
+            │                                │                               │
+            │         ┌─────────────────────────────────────┐                │
+            │         │         PANEL_CHARACTER             │                │
+            │         ├─────────────────────────────────────┤                │
+            └────────>│ * panel_id (PK, FK)            INT  │<───────────────┘
+                      │ * character_variant_id (PK, FK) INT │
+                      └─────────────────────────────────────┘
+
+
+LEGEND
+──────
+*  Primary Key (PK)
+#  Foreign Key (FK)
+1  One side of relationship
+∞  Many side of relationship
+>  Relationship direction
+
+
+RELATIONSHIPS
+─────────────
+USER ──────────────────< PROJECT           (One User has many Projects)
+PROJECT ───────────────< CHARACTER         (One Project has many Characters)
+PROJECT ───────────────< SETTING           (One Project has many Settings)
+PROJECT ───────────────< PANEL             (One Project has many Panels)
+CHARACTER ─────────────< CHARACTER_VARIANT (One Character has many Variants)
+SETTING ───────────────< PANEL             (One Setting is used in many Panels)
+CHARACTER_VARIANT >────< PANEL             (Many-to-Many via PANEL_CHARACTER)
+
+
+JUNCTION TABLE NOTES
+────────────────────
+PANEL_CHARACTER resolves the many-to-many relationship between
+panels and character variants. Each record represents a specific
+character variant appearing in a specific panel.
+
+Composite Primary Key: (panel_id, character_variant_id)

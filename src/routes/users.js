@@ -2,19 +2,16 @@ const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
 
-// GET all users
+// Special routes (must come before /:id routes)
+router.get('/search', userController.searchUsers);
+router.get('/stats', userController.getUserStats);
+router.get('/recent', userController.getRecentUsers);
+
+// Standard CRUD routes
 router.get('/', userController.getAllUsers);
-
-// GET user by ID
 router.get('/:id', userController.getUserById);
-
-// POST create new user
 router.post('/', userController.createUser);
-
-// PUT update user
 router.put('/:id', userController.updateUser);
-
-// DELETE user
 router.delete('/:id', userController.deleteUser);
 
 module.exports = router;
