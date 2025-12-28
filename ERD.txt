@@ -30,9 +30,10 @@
 │   name           STRING │    │   name           STRING │    │ # project_id (FK)      INT  │
 │ # project_id (FK)  INT  │    │ # project_id (FK)  INT  │    │   image_link        STRING  │
 │   description    STRING │    │   description    STRING │    │ # setting_id (FK)      INT  │
-│   default_variant STRING│    └─────────────┬───────────┘    │   shot_type         STRING  │
-│   variant        STRING │                  │                │   aspect_ratio      STRING  │
-└───────────┬─────────────┘                  │                │   description       STRING  │
+│   default_variant STRING│    │   reference_img? STRING │    │   shot_type         STRING  │
+│   variant        STRING │    └─────────────┬───────────┘    │   aspect_ratio      STRING  │
+│   reference_img? STRING │                  │                │   description       STRING  │
+└───────────┬─────────────┘                  │                │   reference_img?    STRING  │
             │                                │                └──────────────┬──────────────┘
             │ 1                              │ 1                             │
             │                                │                               │
@@ -44,6 +45,7 @@
 │ # character_id (FK) INT │                  │                               │
 │   name           STRING │                  │                               │
 │   description    STRING │                  │                               │
+│   reference_img? STRING │                  │                               │
 └───────────┬─────────────┘                  │                               │
             │                                │                               │
             │ 1                              │                               │ 1
@@ -62,6 +64,7 @@ LEGEND
 ──────
 *  Primary Key (PK)
 #  Foreign Key (FK)
+?  Optional/Nullable attribute
 1  One side of relationship
 ∞  Many side of relationship
 >  Relationship direction
@@ -76,6 +79,18 @@ PROJECT ───────────────< PANEL             (One Pr
 CHARACTER ─────────────< CHARACTER_VARIANT (One Character has many Variants)
 SETTING ───────────────< PANEL             (One Setting is used in many Panels)
 CHARACTER_VARIANT >────< PANEL             (Many-to-Many via PANEL_CHARACTER)
+
+
+ATTRIBUTE NOTES
+───────────────
+reference_img (Optional)
+  - CHARACTER: Reference image for the base character design
+  - CHARACTER_VARIANT: Reference image for this specific variant
+  - SETTING: Reference image for the setting/environment
+  - PANEL: Reference image for composition/style guidance
+
+image_link (PANEL only)
+  - The AI-generated storyboard image for this panel
 
 
 JUNCTION TABLE NOTES

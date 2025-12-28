@@ -294,6 +294,172 @@ const { query } = require("./config/queries");
 const users = await query("SELECT * FROM users WHERE created_at > ?", [date]);
 ```
 
+## Database Migrations
+
+Migrations manage your database schema changes in a version-controlled way. They allow you to evolve your database structure while keeping it in sync with your models.
+
+### Migration Commands
+
+```bash
+# Run all pending migrations
+npm run migrate
+
+# Check migration status
+npm run migrate:status
+
+# Create a new blank migration
+npm run migrate:create add_avatar_to_users
+
+# Generate migration from a model
+npm run migrate:generate User
+```
+
+### How It Works
+
+1. **Migration files** are stored in `database/migrations/`
+2. Each file is timestamped and run in order
+3. A `migrations` table tracks which migrations have been executed
+4. Migrations are only run once
+
+### Creating Migrations
+
+#### Option 1: Generate from Model
+
+The easiest way is to generate a migration from your model schema:
+
+```bash
+npm run migrate:generate User
+```
+
+This creates a migration file based on your User model's schema definition.
+
+#### Option 2: Create Manually
+
+Create a blank migration and write SQL:
+
+```bash
+npm run migrate:create add_posts_table
+```
+
+Then edit the generated file in `database/migrations/`:
+
+```sql
+-- Migration: add_posts_table
+-- Created: 2024-01-28T12:00:00.000Z
+
+CREATE TABLE IF NOT EXISTS posts (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  content TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_user_id (user_id)
+);
+```
+
+### Running Migrations
+
+Run pending migrations:
+
+```bash
+npm run migrate
+```
+
+Output:
+```
+Starting migrations...
+
+Found 2 pending migration(s):
+
+Executing migration: 20241228000001_create_users_table.sql
+✓ Completed: 20241228000001_create_users_table.sql
+
+Executing migration: 20241228000002_add_posts_table.sql
+✓ Completed: 20241228000002_add_posts_table.sql
+
+✓ All migrations completed successfully!
+```
+
+### Check Migration Status
+
+See which migrations have been applied:
+
+```bash
+npm run migrate:status
+```
+
+Output:
+```
+Migration Status
+
+Executed Migrations:
+  ✓ 00000000000000_create_migrations_table.sql
+  ✓ 20241228000001_create_users_table.sql
+
+Pending Migrations:
+  ○ 20241228000002_add_posts_table.sql
+
+Total: 2 executed, 1 pending
+```
+
+### Migration Workflow
+
+1. **Create your model** with schema definition
+2. **Generate migration** from the model
+3. **Review** the generated SQL
+4. **Run migration** to apply changes
+5. **Commit** both model and migration files
+
+Example workflow:
+
+```bash
+# 1. Create a new model (Post.js with schema)
+# 2. Generate migration
+npm run migrate:generate Post
+
+# 3. Review the generated SQL in database/migrations/
+
+# 4. Run migration
+npm run migrate
+
+# 5. Verify
+npm run migrate:status
+```
+
+### Best Practices
+
+- **Never modify executed migrations** - Create a new migration instead
+- **Test migrations locally** before deploying
+- **Keep migrations small** - One logical change per migration
+- **Use transactions** for complex migrations
+- **Document changes** - Add comments to explain the "why"
+- **Version control** - Commit migrations with your code
+
+### Example: Adding a Field
+
+If you need to add a field to an existing table:
+
+```bash
+# Create migration
+npm run migrate:create add_avatar_to_users
+```
+
+Edit the migration file:
+
+```sql
+-- Add avatar field to users table
+
+ALTER TABLE users
+ADD COLUMN avatar VARCHAR(255) NULL AFTER name;
+```
+
+Run the migration:
+
+```bash
+npm run migrate
+```
+
 ## Testing the API
 
 Once running, test the endpoints:
